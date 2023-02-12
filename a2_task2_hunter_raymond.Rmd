@@ -1,0 +1,222 @@
+---
+title: "a2_HunterRaymond_t2"
+author: "Ray Hunter"
+date: "2023-02-12"
+output:   
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, echo=TRUE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE,  results=FALSE)
+library(purrr)
+library(tidyverse)
+library(janitor)
+library(Metrics)
+library(cowplot)
+library(here)
+library(kableExtra)
+```
+
+## Task 2
+
+#### Introduction:
+
+The purpose this task is to answer the question: Do do this, we use a non linear least squares to estimate parameters of a lnegth to wight model for lizard populations in New Mexico. 
+
+All data was collect...
+
+
+
+**Dats Source:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f
+
+
+### 1: 
+
+
+
+We will need to Fit a snout length to weight model of the following form to all lizards in your dataframe.
+Since we have a variable from the future we can use the `lead()` function. Make sure to drop the `NA` created by the lead function.
+
+```{r}
+mdl_data<-  read_csv(here("data", "lizards.csv")) %>% 
+  clean_names() %>% 
+  mutate(log_weight = log(weight), log_length = log(sv_length)) 
+  
+ 
+```
+
+
+#### creating a function
+
+```{r }
+func1<-function(a,b,length){
+ out= a*(length^b)
+return(out)
+}
+```
+
+
+
+#### initial guess 
+
+$$  W =a(SVL)^b $$
+
+$$ log(W)= log(a) + b*log(SVL)$$
+Because the data has an exponential nature, we need to use a log transformation to creat a linear model using OSL. This then gives us the coefficient values of the model that can be applied to the orignial equation.
+
+```{r}
+guess_mod <- lm(log_weight ~log_length, data = mdl_data) 
+summary(guess_mod)
+```
+
+
+
+
+
+
+W = a(SVL)^b
+
+$$  W =a(SVL)^b $$
+
+$$ W = e^{-8.25} (SVL)^{2.48}$$
+
+
+
+#### NLS model and figure
+```{r}
+nls_mdl=nls(weight ~func1(a,b, sv_length),
+                  data=mdl_data,
+                  start=list(a=exp(-8.25), b=2.479417),
+                  trace=TRUE)
+```
+
+
+```{r}
+
+mdl_predict<-mdl_data %>% 
+  mutate(predict=predict(nls_mdl,newdata=.))
+
+ggplot1 <- ggplot(data=mdl_predict)+
+  geom_point(aes(x=sv_length,y=weight,colour = sex)) + 
+    geom_smooth(aes(x=sv_length,y=predict), color='black') +
+   facet_wrap(~sex)
+  
+
+```
+
+
+
+
+
+
+
+#### NLS model output
+```{r}
+broom::tidy(nls_mdl) %>% 
+  kable(caption = "Original NLS") %>% 
+  kable_classic()
+```
+
+
+
+
+
+#### second NLS
+
+
+```{r}
+mdl2_data <- mdl_data %>% 
+  filter(spp =="CNTI", sex=="M")
+```
+
+
+#### NLS model and figure
+```{r}
+nls_mdl2=nls(weight ~func1(a,b, sv_length),
+                  data=mdl2_data,
+                  start=list(a=exp(-9.0240), b=2.6981),
+                  trace=TRUE)
+```
+
+```{r}
+guess_mod2 <- lm(log_weight ~log_length, data = mdl2_data) 
+summary(guess_mod2)
+```
+
+```{r}
+
+mdl2_predict<-mdl2_data %>% 
+  mutate(predict=predict(nls_mdl2,newdata=.)) 
+
+ggplot2 <- ggplot(data=mdl2_predict)+ xlim(0,100) +ylim(0,40) +
+  geom_point(aes(x=sv_length,y=weight)) + 
+    geom_smooth(aes(x=sv_length,y=predict), color='blue') 
+  
+ggplot1
+ggplot2
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
