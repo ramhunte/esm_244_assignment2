@@ -1,5 +1,5 @@
 ---
-title: "a2_HunterRaymond_t2"
+title: "Task 2"
 author: "Ray Hunter"
 date: "2023-02-12"
 output:   
@@ -16,107 +16,126 @@ library(Metrics)
 library(cowplot)
 library(here)
 library(kableExtra)
+library(Metrics)
 ```
 
 ## Task 2
 
 #### Introduction:
 
-The purpose this task is to answer the question: Do do this, we use a non linear least squares to estimate parameters of a lnegth to wight model for lizard populations in New Mexico. 
-
-All data was collect...
-
-
+The purpose this task is to create a model that accurately fits lizard phenotype traits to a data set of lizard observations. To do this, we use a non linear least squares model to estimate the parameters of a snout length to weight model. All data was collected in New Mexico from 1989-2006 across twenty different species (Ligthfoot and Whitford, 2020).  
 
 **Dats Source:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f
 
 
-### 1: 
 
-
-
-We will need to Fit a snout length to weight model of the following form to all lizards in your dataframe.
-Since we have a variable from the future we can use the `lead()` function. Make sure to drop the `NA` created by the lead function.
-
+#### creating an NLS model 
 ```{r}
-mdl_data<-  read_csv(here("data", "lizards.csv")) %>% 
+#reading in data and wrangling
+mdl1_data<-  read_csv(here("data", "lizards.csv")) %>% 
   clean_names() %>% 
+  #taking th log of values 
   mutate(log_weight = log(weight), log_length = log(sv_length)) 
   
+
+mdl1_data$sex[mdl1_data$sex=="F"] <- "female"
+mdl1_data$sex[mdl1_data$sex=="M"] <- "male"
  
 ```
 
+**1:** Model equation for lizard weigth ($W$) and snout length ($SVL$) where $a$ and $b$ are parameters that need to be fitted.
 
-#### creating a function
+$$  W =a(SVL)^b $$
 
+
+**2:** Because the data has an exponential nature, we need to use a log transformation to create a linear model using ordinary least squares (OLS). This then gives us the intercepts and slope coefficient values of the model that can be applied to the original equation to create a non linear least squares (NLS) model.*
+
+$$ log(W)= log(a) + b*log(SVL)$$
 ```{r }
+#running an OLS model
+guess_mod1 <- lm(log_weight ~log_length, data = mdl1_data) 
+
+
+#creating a funciton that calculates the original equation
 func1<-function(a,b,length){
  out= a*(length^b)
 return(out)
 }
+
+
+
+
+#creating and NLS model 
+nls_mdl1=nls(weight ~func1(a,b, sv_length),
+                  data=mdl1_data,
+                  start=list(a=exp(-8.25), b=2.479417),
+                  trace=TRUE)
+summary(nls_mdl1)
 ```
 
-
-
-#### initial guess 
-
-$$  W =a(SVL)^b $$
-
-$$ log(W)= log(a) + b*log(SVL)$$
-Because the data has an exponential nature, we need to use a log transformation to creat a linear model using OSL. This then gives us the coefficient values of the model that can be applied to the orignial equation.
-
-```{r}
-guess_mod <- lm(log_weight ~log_length, data = mdl_data) 
-summary(guess_mod)
-```
-
-
-
-
-
-
-W = a(SVL)^b
-
-$$  W =a(SVL)^b $$
+**3:** We then extract the coefficients from the OLS model and apply them to a function that can be used to create a non-linear least regressions NLS model using the original equation.
 
 $$ W = e^{-8.25} (SVL)^{2.48}$$
 
 
 
-#### NLS model and figure
-```{r}
-nls_mdl=nls(weight ~func1(a,b, sv_length),
-                  data=mdl_data,
-                  start=list(a=exp(-8.25), b=2.479417),
-                  trace=TRUE)
-```
+```{r, fig.cap="Figure 1: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements for all lizards. "}
+#creating a new data set with model predicitions
+mdl1_predict<-mdl1_data %>% 
+  mutate(predict=predict(nls_mdl1,newdata=.))
 
-
-```{r}
-
-mdl_predict<-mdl_data %>% 
-  mutate(predict=predict(nls_mdl,newdata=.))
-
-ggplot1 <- ggplot(data=mdl_predict)+
+#visualizing the NLS
+ggplot1 <- ggplot(data=mdl1_predict)+
   geom_point(aes(x=sv_length,y=weight,colour = sex)) + 
+  ggtitle("NLS Data Predictions") + 
+ labs(x = "Snout-Vent Length (mm)", y = "Body Weight (g)")+
+  
     geom_smooth(aes(x=sv_length,y=predict), color='black') +
    facet_wrap(~sex)
-  
-
+ggplot1
 ```
 
 
-
-
-
-
-
+```{r, results=TRUE}
 #### NLS model output
-```{r}
-broom::tidy(nls_mdl) %>% 
-  kable(caption = "Original NLS") %>% 
-  kable_classic()
+
+broom::tidy(nls_mdl1) %>% 
+  kable(caption = "Figure 2: NLS model showing the parameter estimates for *a* an *b*. These parametere are used in the model to predict body mass (g) from snot-vent length (mm).") %>% 
+  kable_material()
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -126,39 +145,95 @@ broom::tidy(nls_mdl) %>%
 
 
 ```{r}
-mdl2_data <- mdl_data %>% 
-  filter(spp =="CNTI", sex=="M")
+#wrangle new data set
+mdl2_data <- mdl1_data %>% 
+  filter(spp =="CNTI", sex=="male")
 ```
 
 
-#### NLS model and figure
+#### NLS Model Creation and Figure
 ```{r}
+
+#finding parameter values from lm of log values
+guess_mod2 <- lm(log_weight ~log_length, data = mdl2_data) 
+summary(guess_mod2)
+
+
+#creating NLS with parameters found from log lm 
 nls_mdl2=nls(weight ~func1(a,b, sv_length),
                   data=mdl2_data,
                   start=list(a=exp(-9.0240), b=2.6981),
                   trace=TRUE)
-```
 
-```{r}
-guess_mod2 <- lm(log_weight ~log_length, data = mdl2_data) 
-summary(guess_mod2)
-```
 
-```{r}
-
+#creating a predict df for model 2 
 mdl2_predict<-mdl2_data %>% 
   mutate(predict=predict(nls_mdl2,newdata=.)) 
+```
+
+```{r, fig.cap="Figure 3: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements. NLS model 1 (root mean squared error = 1.562) fitting parameters to all lizards is shown in red and NLS model 2 (root mean squarred error = 3.349) fitting parameters for just male Western Whiptail lizards (*Cnemidophorus tigrisatus*) is in blue. Becasue the NLS 1 model has a lower RMSE, it predicts the data better and therefore should be used over the NLS model 2 to fit the *C. tigrisatus* data." }
+
+
+
+
 
 ggplot2 <- ggplot(data=mdl2_predict)+ xlim(0,100) +ylim(0,40) +
   geom_point(aes(x=sv_length,y=weight)) + 
-    geom_smooth(aes(x=sv_length,y=predict), color='blue') 
+  ggtitle("NLS Data Predictions") + 
+ labs(x = "Snout-Vent Length (mm)", y = "Body Weight (g)")+
+    geom_smooth(show.legend=TRUE, aes(x=sv_length,y=predict), color='blue') +
+  geom_smooth(data=mdl1_predict, show.legend=TRUE, aes(x=sv_length, y=predict), color="red") +
+  scale_colour_manual(name="legend", values=c("blue", "red")) +
+  scale_linetype_discrete(labels=c("NLS 1", "NLS 2"))
   
-ggplot1
 ggplot2
+
+
+
+
+
+
+#calculating rmse for two models
+rmse_mdl1 <- rmse(mdl1_predict$weight, mdl1_predict$predict)
+rmse_mdl2 <- rmse(mdl2_predict$weight, mdl2_predict$predict)
+
+
 ```
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Do I need to make a model #3 using the model 1 (total data set) a and b parameters and apply it to the model 2 data set (just whip tail)? if so... but not workign becasue model 2 and model 3 NLS are the same
+```{r}
+#creating a model 3 nl whihc is model 1 nls using data from mdl2
+nls_mdl3=nls(weight ~func1(a,b, sv_length),
+                  data=mdl2_data,
+                  start=list(a=exp(-8.25), b=2.479417),
+                  trace=TRUE)
+
+#creating a predict df for model 3 using model 2 (just male Western Whiptail data)
+mdl3_predict<-mdl2_data %>% 
+  mutate(predict=predict(nls_mdl3,newdata=mdl2_data)) 
+```
 
 
 

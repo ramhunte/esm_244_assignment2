@@ -23,11 +23,10 @@ library(patchwork)
 
 ## Task 1
 
-For this task, produce a final, professionally formatted knitted HTML that contains the following: a. An overview section describing the data, the question(s) to be addressed in your analysis, and a citation of the dataset.
 
 #### Introduction:
 
-The purpose this task is to answer the question: Can plant traits (height, length, width, and leaf count) to determine predict the specific species of palmetto as *Serenoa repens* or *Sabal etonia*?. This is done by creating two different binary logistic regression models testing the variabiles' ability to predict the species. Data was collected in south-central Florida from 1981 to 2017 at five year intervals (Abrhamson, 2019).
+The purpose this task is to answer the question: Can plant traits (height, length, width, and leaf count) to determine predict the specific species of palmetto as *Serenoa repens* or *Sabal etonia*? This is done by creating two different binary logistic regression models testing the variabiles' ability to predict the species. Data was collected in south-central Florida from 1981 to 2017 at five year intervals (Abrhamson, 2019).
 
 **Data source:** Abrahamson, W.G. 2019. Survival, growth and biomass estimates of two dominant palmetto species of south-central Florida from 1981 - 2017, ongoing at 5-year intervals ver 1. Environmental Data Initiative.
 
