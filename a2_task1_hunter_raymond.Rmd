@@ -19,20 +19,22 @@ library(AICcmodavg)
 library(broom) 
 library(knitr)
 library(patchwork)
+library(kableExtra)
 ```
 
 ## Task 1
 
-
 #### Introduction:
 
-The purpose this task is to answer the question: Can plant traits (height, length, width, and leaf count) to determine predict the specific species of palmetto as *Serenoa repens* or *Sabal etonia*? This is done by creating two different binary logistic regression models testing the variabiles' ability to predict the species. Data was collected in south-central Florida from 1981 to 2017 at five year intervals (Abrhamson, 2019).
+The purpose this task is to answer the question: Can palmetto plant traits (height, canopy length, canopy width, and leaf count) predict the specific species as *Serenoa repens* or *Sabal etonia*? This was answered by creating two different binary logistic regression models testing the variables' ability to predict the species. Data was collected in south-central Florida from 1981 to 2017 at five year intervals (Abrhamson, 2019). Plant height, caopy length, and canopy width were measure in centimeters (cm) and leaf count was measured by individuals observed.
 
 **Data source:** Abrahamson, W.G. 2019. Survival, growth and biomass estimates of two dominant palmetto species of south-central Florida from 1981 - 2017, ongoing at 5-year intervals ver 1. Environmental Data Initiative.
 
 b.  A section containing 2 - 3 finalized (customized, suitable for a publication) data visualizations (with figure captions) in which you explore differences in height, canopy length, canopy width, and green leaves for the two species. If you prefer, combine the figures into a compound figure using {patchwork} or {cowplot}. Below your data visualizations, add a sentence or two with a takeaway from the plots, e.g., based on these plots, which predictor variables are more likely to help classify species correctly?
 
-```{r}
+#### Preliminary Trend Inspection
+
+```{r, results = TRUE}
 #reading in the data
 palmetto <- read_csv(here("data", "palmetto.csv")) %>%
   #selecting species and chosen variables
@@ -42,60 +44,60 @@ palmetto <- read_csv(here("data", "palmetto.csv")) %>%
   #dropping na and other 
   drop_na()
 
-levels(palmetto$species)
-#1 (Serenoa repens) comes first = 0
-#2 (Sabal etonia) comes second = 1
-```
 
-#### Making plots
 
-```{r, results = TRUE}
-#
+
+
+
+#making a plot with height and canpy width 
 plot1 <- ggplot(data = palmetto, aes(x = height, y = width)) +
   geom_point(aes(color = species)) +
   ggtitle("") + 
- labs(x = "height", y = "width") 
+ labs(x = "Plant Height (cm)", y = "Canopy Width (cm)") +
+  scale_color_discrete(name = "Species", labels = c("1" = " Serenoa repens ", "2" = "Sabal etonia"))
 
-
+#making a plot with height and canopy length
 plot2 <- ggplot(data = palmetto, aes(x = height, y = length)) +
   geom_point(aes(color = species))  +
   ggtitle("") + 
- labs(x = "Height", y = "Length") 
+ labs(x = "Plant Height (cm)", y = "Canopy Length (cm)") +
+  scale_color_discrete(name = "Species", labels = c("1" = " Serenoa repens ", "2" = "Sabal etonia"))
 
 
-
+#making a plot with height and leaf count
 plot3 <- ggplot(data = palmetto, aes(x = height, y = green_lvs)) +
   geom_point(aes(color = species)) +
   ggtitle("") + 
- labs(x = "Height", y = "Green Leaf Count") 
+ labs(x = "Plant Height (cm)", y = "Green Leaf Count") + 
+    scale_color_discrete(name = "Species", labels = c("1" = " Serenoa repens ", "2" = "Sabal etonia"))
 
 
 
 #patching together the plots
-plot_patch <- plot1  + plot2  / plot3 +plot_layout(guides = 'collect') & theme( legend.position = 'bottom') 
+plot_patch <- plot3  + plot2  / plot1 +plot_layout(guides = 'collect') & theme( legend.position = 'bottom') 
 
 
 #adding plot annotations A and B
- plot_patch +  plot_annotation(
+ plot_patch +  plot_annotation("Preliminary Inspection of Predictor Variables",
   tag_levels = "A") 
 ```
 
 **Figure 1**: Preliminary data observations across variables.
 
-**A:** Comparing plant height canopy width. Appears to be much overlap between species..
+**A:** Comparing plant height and total green leaf count. *S. repens* appears to higher green leaf counts compared to *S. etonia* per unit of height.
 
 **B:** Comparing plant height and canopy length. *S. repens* appears to have slightly smaller canopy length measurements compared to *S. etonia* per unit of height.
 
-**C:** Comparing plant height and total green leaf count. *S. repens* appears to higher green leaf counts compared to *S. etonia* per unit of height.
+**C:** Comparing plant height canopy width. Appears to be much overlap between species.
 
 Based off of the initial data visualization, canopy length and green leaf count are going to be the two most predicting variables determining the type of species. Height and width show significant overlap across both species where as canopy length and green leaf count yield two distinct patterns for both species.
 
+#### Binary Logistic Regression Modeling
+
 c.  A section in which you perform binary logistic regression to determine the probability of a plant being either Serenoa repens or Sabal etonia based on several predictor variables. Perform the analysis twice, using cross validation to compare two models:
 
-    i.  Log odds of plant type using plant height, canopy length, canopy width and green leaves as predictor variable.
-
     ```{r}
-    #creaitng the model input
+    #creaitng the model input for model 1
     f1 <- species ~ height + length + width + green_lvs
 
 
@@ -106,12 +108,12 @@ c.  A section in which you perform binary logistic regression to determine the p
     #visualizing the model
     blr1_tidy <- broom::tidy(plant_blr1)
     blr1_tidy
-    ```
 
-    ii. Log odds of plant type using plant height, canopy width and green leaves (i.e., drop canopy length for this model)
 
-    ```{r}
-    #creaitng the model input
+
+
+
+    #creaitng the model input for model 2
     f2 <- species ~ height + width + green_lvs
 
 
@@ -128,42 +130,53 @@ c.  A section in which you perform binary logistic regression to determine the p
 
     ```
 
+
+#### need to work on this. has to got to the end of task 2 for part e
 ```{r}
 # converting the odds to the probability of being 1 or 2   
 blr1_fitted <- plant_blr1 %>%
-  broom::augment(type.predict = "response")
+  broom::augment(type.predict = "response")   %>% 
+  mutate(species_pred = ifelse(.fitted > 0.5, "2" , "1"))
 
 blr2_fitted <- plant_blr2 %>%
   broom::augment(type.predict = "response")
 
 ```
 
-Visualizing data
+#### Grphing the Models
 
 ```{r}
-ggplot(data = blr1_fitted, aes(x = green_lvs, y = .fitted)) +
+ggplot_blr1 <- ggplot(data = blr1_fitted, aes(x = green_lvs, y = .fitted)) +
   # add aes(shape = species) to compare probability with actual
   geom_point(aes(color = species)) +
   # add geom_smooth to show general fit
-  geom_smooth(aes(color = species), se = FALSE) +
-  labs(x = "Green Leaves",
-   	   y = "Probability of outcome x")
+  geom_smooth() +
+  labs(x = "Green Leaves Count",
+   	   y = "Probability of outcome S. Etonia") + 
+    scale_color_discrete(name = "Species", labels = c("1" = " Serenoa repens ", "2" = "Sabal etonia"))
 
 
-ggplot(data = blr1_fitted, aes(x = width, y = .fitted)) +
+ggplot_blr2 <- ggplot(data = blr1_fitted, aes(x = width, y = .fitted)) +
   # add aes(shape = species) to compare probability with actual
   geom_point(aes(color = species)) +
   # add geom_smooth to show general fit
-  geom_smooth(aes(color = species), se = FALSE) +
-  labs(x = "Width",
-   	   y = "Probability of S. etonia")
+  geom_smooth() +
+  labs(x = "Canopy Width (cm)",
+   	   y = "Probability of outcome S. etonia") + 
+    scale_color_discrete(name = "Species", labels = c("1" = " Serenoa repens ", "2" = "Sabal etonia"))
 
+#patching together the plots
+blr_patch <- ggplot_blr1  + ggplot_blr2  +plot_layout(guides = 'collect') & theme( legend.position = 'bottom') 
+
+#adding plot annotations A and B
+blr_patch +  plot_annotation("Binary Least Regression Models",
+  tag_levels = "A") 
 
 ```
 
 ### AIC and BIC
 
-```{r}
+```{r, results=TRUE}
 # Listing the AIC values
 AIC_list<-c(AIC(plant_blr1), AIC(plant_blr2))
 BIC_list <- c(BIC(plant_blr1), BIC(plant_blr2))
@@ -178,90 +191,26 @@ model_output$model<-c( "Model 1","Model 2")
 model_output<-model_output[,c("model", "AIC", "delta.AIC", "BIC", "delta.BIC" )]
 
 
-
-kable(model_output, format = "markdown", digits = 3,caption = "*Figure 1*: Model outputs showing the adjusted R^2^ value, AIC/BIC values, and delta AIC/BIC values for both models.")
+kable(model_output, format = "markdown", digits = 3, caption = "*Figure 2*: Model outputs showing the AIC/BIC values and delta AIC/BIC values for both models.") 
+ 
 ```
 
-### 10 fold for loop
+#### 10 fold
 
-And let's compare with a 10-fold cross-validation, using prediction accuracy as our metric.
-
-
+#### K fold
 
 ```{r}
+set.seed(123)
 
-#creating a training data set
-folds <- 10
-fold_vec <- rep(1:folds, length.out = nrow(palmetto))
 
-set.seed(42) 
-palmetto_fold <- palmetto %>%
-  mutate(group = sample(fold_vec, size = n(), replace = FALSE))
-table(palmetto$group)
-
-### creating the first fold
-test_df <- palmetto_fold %>%
-  filter(group == 1)
-
-train_df <- palmetto_fold %>%
-  filter(group != 1)
+n_folds <- 10
+fold_vec <- rep(1:n_folds, length.out = nrow(palmetto))
+palmetto_kfold <- palmetto %>%
+  mutate(fold = sample(fold_vec, size = n(), replace = FALSE))
 
 
 
 
-
-
-
-#creating a function to calculate accuracy
-pred_acc <- function(x, y) {
-  accurate <- ifelse(x == y, 1, 0)
-  return(mean(accurate, na.rm = TRUE))
-}
-
-
-#creating linear models with the training data set
-training_glm1 <- glm(f1, data = train_df)
-training_glm2 <- glm(f2, data = train_df)
-
-
-
-
-
-
-
-#using models to predict the actual data set
-predict_test <- test_df %>%
-  mutate(model1 = predict(training_glm1, test_df),
-         model2 = predict(training_glm2, test_df))
-
-pred_acc_test <- predict_test %>%
-  summarize(acc_mdl1 = pred_acc(model1, species),
-            acc_mdl2 = pred_acc(model2, species))
-```
-
-```{r, results=TRUE}
-
-tenfold_output <- pred_acc_test %>% 
-  rename(Model_1_acc = acc_mdl1,Model_2_acc = acc_mdl2)
-kable(tenfold_output, format = "markdown", digits = 3,caption = "*Figure 2*: Root mean squared error outputs for each model from the 10 fold cross validation test. The lower the error the more accurate the model. Model 3 has the lowest error.")
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### K fold
-
-```{r}
 results_df <- data.frame()
 pred_acc <- function(x, y) {
   accurate <- ifelse(x == y, 1, 0)
@@ -296,21 +245,58 @@ results_df %>%
 kable(results_df,  format = "markdown", digits = 3,caption = "*Figure 3*:")
 ```
 
-10 fold cross validation using for-loop confirmst that model 1 is more accurate than model 2 at classifying the plant species
+#### train entire data set on it
+
+Our final model: `r equatiomatic::extract_eq(plant_blr1, wrap = TRUE)`
+
+and with coefficients in place: `r equatiomatic::extract_eq(plant_blr1, wrap = TRUE, use_coefs = TRUE)`
 
 
-### Final Model
-
-```{r, results=TRUE}
 
 
-kable(blr1_tidy, format = "markdown", digits = 3, caption = "*Figure 4*:")
+#run glm for final model
 
 
-```
 
-Make sure you understand which species is the first '0' factor level, and which is '1' - you may want to convert to a factor first, then use the levels() function to check. Use repeated cross validation (ten-fold cross validation, repeated at least ten times - you can use functions from the {tidymodels} package to automate this, or manually perform the analysis using for-loops or {purrr} functions). Based on the results of the cross validation, describe which model performs better at classification; you may wish to compare AICC and BIC values as well to support your decision.
 
-d.  Train your selected model using the entire dataset, and create a finalized table (e.g., knitr::kable() and {kableExtra} functions) containing the binary logistic regression model results (at least coefficients, standard errors for the coefficients, and information for significance - consider using broom::tidy() to get you most of the way).
+
+
+
 
 e.  A section that evaluates how successfully this model would "classify" a plant as the correct species, using a 50% cutoff (e.g. if the probability is \>=50% that it is species A, then it would be classified as species A). Use broom::augment() to find the probabilities (instead of log-odds) for each plant in the original dataset, then add a column for which species your model would classify that plant as (using a 50% cutoff) based on the included predictor variables. The outcome should be a finalized table showing, for each species, how many plants in the original dataset would be correctly classified and how many were incorrectly classified by the model, as well as an additional column with "% correctly classified". Add a table caption above the table, and a 1-2 sentence conclusion paragraph after.
+
+
+
+blr_f1_pred <- adelie_chinstrap %>%
+  mutate(predict(blr_tidyfit_f1, .),
+         predict(blr_tidyfit_f1, ., type = 'prob'))
+
+blr_f1_pred %>%
+  roc_curve(truth = species, .pred_Adelie) %>%
+  autoplot()
+
+blr_f1_pred %>%
+  roc_auc(truth = species, .pred_Adelie)
+
+### Students repeat for blr_tidyfit_f2 and compare!
+blr_f2_pred <- adelie_chinstrap %>%
+  mutate(predict(blr_tidyfit_f2, .),
+         predict(blr_tidyfit_f2, ., type = 'prob'))
+
+blr_f2_pred %>%
+  roc_curve(truth = species, .pred_Adelie) %>%
+  autoplot()
+
+blr_f2_pred %>%
+  roc_auc(truth = species, .pred_Adelie)
+
+
+Final table only needed for final model 
+
+#based on the probablity colomn (fitted)
+use this to create match species 1 =species 1 --> True
+species 1 - species 2 --> False
+make another column saying the proportion of True to False 
+
+
+

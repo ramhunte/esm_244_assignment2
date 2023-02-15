@@ -23,13 +23,12 @@ library(Metrics)
 
 #### Introduction:
 
-The purpose this task is to create a model that accurately fits lizard phenotype traits to a data set of lizard observations. To do this, we use a non linear least squares model to estimate the parameters of a snout length to weight model. All data was collected in New Mexico from 1989-2006 across twenty different species (Ligthfoot and Whitford, 2020).  
+The purpose this task is to create a model that accurately fits lizard phenotype traits to a data set of lizard observations. To do this, we use a non linear least squares model to estimate the parameters of a snout length to weight model. All data was collected in New Mexico from 1989-2006 across twenty different species (Ligthfoot and Whitford, 2020).
 
-**Dats Source:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f
+**Dats Source:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. <https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f>
 
+#### creating an NLS model
 
-
-#### creating an NLS model 
 ```{r}
 #reading in data and wrangling
 mdl1_data<-  read_csv(here("data", "lizards.csv")) %>% 
@@ -47,10 +46,10 @@ mdl1_data$sex[mdl1_data$sex=="M"] <- "male"
 
 $$  W =a(SVL)^b $$
 
-
-**2:** Because the data has an exponential nature, we need to use a log transformation to create a linear model using ordinary least squares (OLS). This then gives us the intercepts and slope coefficient values of the model that can be applied to the original equation to create a non linear least squares (NLS) model.*
+**2:** Because the data has an exponential nature, we need to use a log transformation to create a linear model using ordinary least squares (OLS). This then gives us the intercepts and slope coefficient values of the model that can be applied to the original equation to create a non linear least squares (NLS) model.\*
 
 $$ log(W)= log(a) + b*log(SVL)$$
+
 ```{r }
 #running an OLS model
 guess_mod1 <- lm(log_weight ~log_length, data = mdl1_data) 
@@ -77,8 +76,6 @@ summary(nls_mdl1)
 
 $$ W = e^{-8.25} (SVL)^{2.48}$$
 
-
-
 ```{r, fig.cap="Figure 1: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements for all lizards. "}
 #creating a new data set with model predicitions
 mdl1_predict<-mdl1_data %>% 
@@ -95,7 +92,6 @@ ggplot1 <- ggplot(data=mdl1_predict)+
 ggplot1
 ```
 
-
 ```{r, results=TRUE}
 #### NLS model output
 
@@ -104,45 +100,7 @@ broom::tidy(nls_mdl1) %>%
   kable_material()
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #### second NLS
-
 
 ```{r}
 #wrangle new data set
@@ -150,8 +108,8 @@ mdl2_data <- mdl1_data %>%
   filter(spp =="CNTI", sex=="male")
 ```
 
-
 #### NLS Model Creation and Figure
+
 ```{r}
 
 #finding parameter values from lm of log values
@@ -200,29 +158,8 @@ rmse_mdl2 <- rmse(mdl2_predict$weight, mdl2_predict$predict)
 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Do I need to make a model #3 using the model 1 (total data set) a and b parameters and apply it to the model 2 data set (just whip tail)? if so... but not workign becasue model 2 and model 3 NLS are the same
+
 ```{r}
 #creating a model 3 nl whihc is model 1 nls using data from mdl2
 nls_mdl3=nls(weight ~func1(a,b, sv_length),
@@ -234,64 +171,3 @@ nls_mdl3=nls(weight ~func1(a,b, sv_length),
 mdl3_predict<-mdl2_data %>% 
   mutate(predict=predict(nls_mdl3,newdata=mdl2_data)) 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
