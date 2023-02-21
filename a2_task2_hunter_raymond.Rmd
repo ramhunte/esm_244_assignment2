@@ -27,7 +27,7 @@ The purpose this task is to create a model that accurately fits lizard phenotype
 
 **Dats Source:** Lightfoot, D. and W.G. Whitford. 2020. Lizard pitfall trap data from 11 NPP study locations at the Jornada Basin LTER site, 1989-2006 ver 37. Environmental Data Initiative. <https://doi.org/10.6073/pasta/4a6e258fb49c31e222ecbbcfd128967f>
 
-#### creating an NLS model
+#### NLS Model 1 Creation
 
 ```{r}
 #reading in data and wrangling
@@ -42,7 +42,7 @@ mdl1_data$sex[mdl1_data$sex=="M"] <- "male"
  
 ```
 
-**1:** Model equation for lizard weigth ($W$) and snout length ($SVL$) where $a$ and $b$ are parameters that need to be fitted.
+**1:** Model equation for lizard weigth ($W$) and snout-vent length ($SVL$) where $a$ and $b$ are parameters that need to be fitted.
 
 $$  W =a(SVL)^b $$
 
@@ -76,7 +76,7 @@ summary(nls_mdl1)
 
 $$ W = e^{-8.25} (SVL)^{2.48}$$
 
-```{r, fig.cap="Figure 1: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements for all lizards. "}
+```{r, fig.cap="*Figure 1*: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements for all lizards. "}
 #creating a new data set with model predicitions
 mdl1_predict<-mdl1_data %>% 
   mutate(predict=predict(nls_mdl1,newdata=.))
@@ -84,11 +84,11 @@ mdl1_predict<-mdl1_data %>%
 #visualizing the NLS
 ggplot1 <- ggplot(data=mdl1_predict)+
   geom_point(aes(x=sv_length,y=weight,colour = sex)) + 
-  ggtitle("NLS Data Predictions") + 
+  ggtitle("NLS Model 1 Data Predictions") + 
  labs(x = "Snout-Vent Length (mm)", y = "Body Weight (g)")+
   
-    geom_smooth(aes(x=sv_length,y=predict), color='black') +
-   facet_wrap(~sex)
+    geom_smooth(aes(x=sv_length,y=predict), color='black') 
+ 
 ggplot1
 ```
 
@@ -96,21 +96,17 @@ ggplot1
 #### NLS model output
 
 broom::tidy(nls_mdl1) %>% 
-  kable(caption = "Figure 2: NLS model showing the parameter estimates for *a* an *b*. These parametere are used in the model to predict body mass (g) from snot-vent length (mm).") %>% 
+  kable(caption = "Table 1: NLS model showing the parameter estimates for *a* an *b*. These parametere are used in the model to predict body mass (g) from snot-vent length (mm).") %>% 
   kable_material()
 ```
 
-#### second NLS
+#### NLS Model 2 Creation 
 
 ```{r}
 #wrangle new data set
 mdl2_data <- mdl1_data %>% 
   filter(spp =="CNTI", sex=="male")
-```
 
-#### NLS Model Creation and Figure
-
-```{r}
 
 #finding parameter values from lm of log values
 guess_mod2 <- lm(log_weight ~log_length, data = mdl2_data) 
@@ -127,47 +123,65 @@ nls_mdl2=nls(weight ~func1(a,b, sv_length),
 #creating a predict df for model 2 
 mdl2_predict<-mdl2_data %>% 
   mutate(predict=predict(nls_mdl2,newdata=.)) 
+
+
+
+#calculating rmse for two models using the Metrics package
+rmse_mdl1 <- rmse(mdl1_predict$weight, mdl1_predict$predict)
+rmse_mdl2 <- rmse(mdl2_predict$weight, mdl2_predict$predict)
 ```
 
-```{r, fig.cap="Figure 3: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements. NLS model 1 (root mean squared error = 1.562) fitting parameters to all lizards is shown in red and NLS model 2 (root mean squarred error = 3.349) fitting parameters for just male Western Whiptail lizards (*Cnemidophorus tigrisatus*) is in blue. Becasue the NLS 1 model has a lower RMSE, it predicts the data better and therefore should be used over the NLS model 2 to fit the *C. tigrisatus* data." }
+#### Final Figure
+```{r, fig.cap="*Figure 2*: Non linear least squars (NLS) model showing the relation ship between snout-vent length (mm) and predicted body weigth (g) fitted to actual body weight measurements. NLS model 1 (root mean squared error = 1.562) fitting parameters to all lizards is shown in red and NLS model 2 (root mean squarred error = 3.349) fitting parameters for just male Western Whiptail lizards (*Cnemidophorus tigrisatus*) is in blue. Becasue the NLS 1 model has a lower RMSE, it predicts the data better and therefore should be used over the NLS model 2 to fit the *C. tigrisatus* data." }
 
 
-
-
-
+#using subset data from model 2 (male whiptail) w/ NLS predicition values in it
 ggplot2 <- ggplot(data=mdl2_predict)+ xlim(0,100) +ylim(0,40) +
+  #actual length on x axis, weight on y axis
   geom_point(aes(x=sv_length,y=weight)) + 
-  ggtitle("NLS Data Predictions") + 
+  ggtitle("NLS Model 1 and 2 Comparison") + 
  labs(x = "Snout-Vent Length (mm)", y = "Body Weight (g)")+
+  
+  #LINE 1: smooth line using actual length on x axis and predicted weigth values from nls model 2 on y axis
     geom_smooth(show.legend=TRUE, aes(x=sv_length,y=predict), color='blue') +
+  
+  #Line 2: actual length on x axis, and predicted weigth values from nls model 1 on y axis 
   geom_smooth(data=mdl1_predict, show.legend=TRUE, aes(x=sv_length, y=predict), color="red") +
   scale_colour_manual(name="legend", values=c("blue", "red")) +
   scale_linetype_discrete(labels=c("NLS 1", "NLS 2"))
-  
+
 ggplot2
 
+#essentailly we are taking the subset data for the male whiotail lizards and displaying two lines on it: one with predicted weigth from nls 1 and another with predicted weigth from nls 2
 
 
-
-
-
-#calculating rmse for two models
-rmse_mdl1 <- rmse(mdl1_predict$weight, mdl1_predict$predict)
-rmse_mdl2 <- rmse(mdl2_predict$weight, mdl2_predict$predict)
 
 
 ```
+
+
 
 Do I need to make a model #3 using the model 1 (total data set) a and b parameters and apply it to the model 2 data set (just whip tail)? if so... but not workign becasue model 2 and model 3 NLS are the same
 
 ```{r}
-#creating a model 3 nl whihc is model 1 nls using data from mdl2
 nls_mdl3=nls(weight ~func1(a,b, sv_length),
                   data=mdl2_data,
                   start=list(a=exp(-8.25), b=2.479417),
                   trace=TRUE)
-
-#creating a predict df for model 3 using model 2 (just male Western Whiptail data)
 mdl3_predict<-mdl2_data %>% 
   mutate(predict=predict(nls_mdl3,newdata=mdl2_data)) 
+
+rmse_mdl3 <- rmse(mdl3_predict$weight, mdl2_predict$predict)
+
+
 ```
+
+
+
+
+
+
+
+
+
+
